@@ -35,7 +35,7 @@ ENVC_testsets/
 └── HEVC-E/
 ```
 
-- **Events.** Download the synthetic events used in the paper from [Google Drive](EVENTS_LINK) (`ENVC_testsets.zip`) and unzip it. This creates the folder tree above with every `events/` folder filled in. Each `.npz` file holds the arrays `x`, `y`, `timestamp` (µs), and `polarity`. File `k` covers the interval from frame `k` to frame `k+1`, so a 96-frame sequence has 95 files.
+- **Events.** Download the synthetic events used in the paper from [Google Drive](https://drive.google.com/file/d/1N5y1z8BqDJxVxFGXmkqcgFFypo9rCe3p/view?usp=sharing) (`ENVC_testsets.zip`) and unzip it. This creates the folder tree above with every `events/` folder filled in. Each `.npz` file holds the arrays `x`, `y`, `timestamp` (µs), and `polarity`. File `k` covers the interval from frame `k` to frame `k+1`, so a 96-frame sequence has 95 files.
 - **RGB frames.** Get the original sequences from their official sources ([UVG](https://ultravideo.fi/dataset.html), [MCL-JCV](https://mcl.usc.edu/mcl-jcv-dataset/), and the JCT-VC HEVC common test conditions). Then cut them to 96 frames and give them the names the events use:
 
   ```bash
