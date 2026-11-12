@@ -1,0 +1,3 @@
+# Extra packages for event_simulation/ (on top of ../requirements.txt)
+opencv-python
+tqdm

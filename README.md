@@ -12,13 +12,64 @@ conda activate ENVC
 pip install -r requirements.txt
 ```
 
+## Datasets
+
+ENVC is evaluated on the first 96 frames of UVG, MCL-JCV, and HEVC Class B, C, D, and E. Each test set lives in its own folder, with the RGB frames as 8-bit YUV 4:2:0 files and the synthetic events next to them:
+
+```
+ENVC_testsets/
+├── UVG/
+│   ├── yuv/
+│   │   ├── Beauty_1920x1080_120.yuv
+│   │   └── ...
+│   └── events/
+│       ├── Beauty_1920x1080_120/
+│       │   ├── 000000.npz        # events between frames 0 and 1
+│       │   ├── ...
+│       │   └── 000094.npz        # events between frames 94 and 95
+│       └── ...
+├── MCL-JCV/
+├── HEVC-B/
+├── HEVC-C/
+├── HEVC-D/
+└── HEVC-E/
+```
+
+- **Events.** Download the synthetic events used in the paper from [Google Drive](EVENTS_LINK) (`ENVC_testsets.zip`) and unzip it. This creates the folder tree above with every `events/` folder filled in. Each `.npz` file holds the arrays `x`, `y`, `timestamp` (µs), and `polarity`. File `k` covers the interval from frame `k` to frame `k+1`, so a 96-frame sequence has 95 files.
+- **RGB frames.** Get the original sequences from their official sources ([UVG](https://ultravideo.fi/dataset.html), [MCL-JCV](https://mcl.usc.edu/mcl-jcv-dataset/), and the JCT-VC HEVC common test conditions). Then cut them to 96 frames and give them the names the events use:
+
+  ```bash
+  python eval/prepare_yuv.py --src /path/to/official/UVG --out ENVC_testsets/UVG/yuv
+  ```
+
+  Files are named `<name>_<W>x<H>_<fps>.yuv`. For example, `Beauty_1920x1080_120fps_420_8bit_YUV.yuv` becomes `Beauty_1920x1080_120.yuv`. The frame size and frame rate are read from the name. The evaluation converts YUV to RGB with BT.709 (full range, bilinear chroma upsampling), as in DCVC-DC and DCMVC.
+
+Then pass `--dataset ENVC_testsets/<test set> --layout yuv` to the evaluation below. Events are read from `<dataset>/events/<sequence>/` by default; `--event-root` selects another location.
+
+### Generating Synthetic Events
+
+[`event_simulation/`](event_simulation/) contains the pipeline that produced the released events. It runs three steps:
+
+1. `make_frames.py` decodes the YUV files to RGB with the same BT.709 conversion as the evaluation.
+2. `interpolate.py` upsamples the frame rate to at least 200 fps with [Super-SloMo](https://github.com/avinashpaliwal/Super-SloMo), using a factor of ⌈200 / fps⌉ and reflect padding to a multiple of 32.
+3. `simulate_events.py` runs the [DVS-Voltmeter](https://github.com/Lynn0306/DVS-Voltmeter) simulator with DVS346 parameters and merges the events of each original frame interval into one file.
+
+Download the pretrained `SuperSloMo.ckpt` from the [Super-SloMo repository](https://github.com/avinashpaliwal/Super-SloMo), install the extra packages, and run:
+
+```bash
+pip install -r event_simulation/requirements.txt
+CKPT=/path/to/SuperSloMo.ckpt DATASET_DIR=ENVC_testsets/HEVC-D bash event_simulation/generate_events.sh
+```
+
+This writes `ENVC_testsets/HEVC-D/events/<sequence>/*.npz` from `ENVC_testsets/HEVC-D/yuv/`. Super-SloMo uses a GPU when one is visible. The simulator is stochastic, so regenerated events are statistically equivalent but not bit-identical to the released ones; use the released events to reproduce the reported numbers exactly. The Super-SloMo model and the DVS-Voltmeter simulator are included under `event_simulation/third_party/` with their MIT licenses. The only change is `align_corners=True` in Super-SloMo's warping, which restores the behavior of the PyTorch version it was trained with.
+
 ## Evaluation
 
 Run inside a GPU allocation or on a GPU server:
 
 ```bash
 bash eval/EVAL.sh \
-  --dataset /path/to/HEVC-D --layout yuv \
+  --dataset ENVC_testsets/HEVC-D --layout yuv \
   --p-frame-model-path /path/to/envc_weights.pt \
   --i-frame-model-path /path/to/intra_weights.pt \
   --quality 0 --num-frames 96 --intra-period 32 --resume
@@ -29,7 +80,7 @@ For the four embedded rate points:
 ```bash
 for quality in 0 1 2 3; do
   bash eval/EVAL.sh \
-    --dataset /path/to/HEVC-D --layout yuv \
+    --dataset ENVC_testsets/HEVC-D --layout yuv \
     --p-frame-model-path /path/to/envc_weights.pt \
     --i-frame-model-path /path/to/intra_weights.pt \
     --quality "$quality" --num-frames 96 --intra-period 32 --resume || break
@@ -47,7 +98,7 @@ Both models share the same code (`models/versions.py`). Select ENVC-L with `--mo
 
 ```bash
 bash eval/EVAL.sh --model envc-l \
-  --dataset /path/to/HEVC-D --layout yuv \
+  --dataset ENVC_testsets/HEVC-D --layout yuv \
   --p-frame-model-path /path/to/envc_l_weights.pt \
   --i-frame-model-path /path/to/intra_weights.pt \
   --quality 0 --num-frames 96 --intra-period 32 --resume
@@ -65,7 +116,7 @@ Each model needs its P-frame checkpoint and the shared I-frame checkpoint:
 
 ## Acknowledgments
 
-The implementation includes components derived from DCVC, DCMVC, and VFPSIE. Existing source copyright and license notices are retained. See [LICENSE](LICENSE) and [licenses/](licenses/).
+The implementation includes components derived from DCVC, DCMVC, and VFPSIE, and the event simulation uses Super-SloMo and DVS-Voltmeter. Existing source copyright and license notices are retained. See [LICENSE](LICENSE) and [licenses/](licenses/).
 
 ## Per-frame Results
 

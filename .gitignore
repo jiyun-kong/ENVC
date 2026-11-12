@@ -8,6 +8,7 @@
 !/eval/
 !/utils/
 !/licenses/
+!/event_simulation/
 
 __pycache__/
 *.py[codz]

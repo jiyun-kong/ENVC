@@ -352,7 +352,7 @@ def collect_inputs(args):
                 if not p.is_file():
                     raise FileNotFoundError(p)
         events = (args.event_root/name/args.event_subdir if args.event_root else
-                  entry/'events' if args.layout == 'sequences' else dataset/'event_voxel_npz'/name)
+                  entry/'events' if args.layout == 'sequences' else dataset/'events'/name)
         for index in range(1, count):
             if args.intra_period < 0 or index % args.intra_period:
                 event_path(events, index - 1)
